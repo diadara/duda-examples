@@ -1,10 +1,8 @@
 /* -*- Mode: C; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*- */
 
 /*
- * Duda I/O Examples: 001 Hello World 02
+ * Duda I/O Examples: 004 JSON
  * =====================================
- * Based on the example 001_hello_world, this web service adds a few more
- * callbacks to explain how the Routing maps are processed.
  */
 
 #include "webservice.h"
