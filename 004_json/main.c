@@ -9,7 +9,7 @@
 
 #include "webservice.h"
 #include "packages/json/json.h"
-#include <string.h>
+
 DUDA_REGISTER("Duda I/O Examples", "JSON Example");
 
 
