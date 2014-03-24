@@ -13,45 +13,34 @@
 DUDA_REGISTER("Duda I/O Examples", "JSON Example");
 
 
-void cb_uptime(duda_request_t *dr)
+void cb_info(duda_request_t *dr)
 {
 
     FILE * f = fopen("/proc/uptime","r");
-    
     float uptime, idletime;
     fscanf(f,"%f %f", &uptime, &idletime);
     fclose(f);
-    json_t * resp = json->create_object();
-    json->add_to_object(resp, "uptime", json->create_number(uptime));
-    json->add_to_object(resp, "idletime", json->create_number(idletime));
-
-    response->http_status(dr,200);
-    response->http_content_type(dr, "json");
-    response->printf(dr, json->print_gc(dr,resp));
-    response->end(dr, NULL);
-
-        
-}
-
-
-void cb_cpuinfo(duda_request_t *dr)
-{
-
-    FILE * f = fopen("/proc/cpuinfo","r");
+    json_t * j_uptime = json->create_object();
+    json->add_to_object(j_uptime, "uptime", json->create_number(uptime));
+    json->add_to_object(j_uptime, "idletime", json->create_number(idletime));
     
-    
+    FILE * g = fopen("/proc/cpuinfo","r");
+
     char * vendor_id = mem->alloc(100); /* dynamically allocating
                                            memory. Can't use malloc as
                                            stack may use different
                                            memory allocator.
                                         */
+
     char * model_name = mem->alloc(200);
+
     gc->add(dr,vendor_id);      /* garbage collector will free
                                    allocated memory after request
                                    context ends */
     gc->add(dr,model_name);
+    
     char line[1000];
-    while(fgets(line,1000,f) != NULL)
+    while(fgets(line,1000,g) != NULL)
         {
             if(strstr(line,"vendor_id\t:"))
                 {
@@ -65,10 +54,15 @@ void cb_cpuinfo(duda_request_t *dr)
                 }
         }
 
-    fclose(f);
+    fclose(g);
+    json_t * j_cpu = json->create_object();
+    json->add_to_object(j_cpu, "vendor_id", json->create_string(vendor_id));
+    json->add_to_object(j_cpu, "model_name", json->create_string(model_name));
     json_t * resp = json->create_object();
-    json->add_to_object(resp, "vendor_id", json->create_string(vendor_id));
-    json->add_to_object(resp, "model_name", json->create_string(model_name));
+    json->add_to_object(resp, "uptime", j_uptime);
+    json->add_to_object(resp,"cpuinfo",j_cpu);
+
+
     response->http_status(dr,200);
     response->http_content_type(dr, "json");
     response->printf(dr, json->print_gc(dr,resp));
@@ -91,8 +85,8 @@ int duda_main()
      * Registering callbacks
      */
 
-    map->static_add("/uptime", "cb_uptime");
-    map->static_add("/cpuinfo", "cb_cpuinfo");
+    map->static_add("/", "cb_info");
+
     /* Return, everything is OK */
     return 0;
 }
