@@ -9,11 +9,11 @@
 
 #include "webservice.h"
 #include "packages/json/json.h"
+#include <string.h>
+DUDA_REGISTER("Duda I/O Examples", "JSON Example");
 
-DUDA_REGISTER("Duda I/O Examples", "Hello World");
 
-
-void cb_json(duda_request_t *dr)
+void cb_uptime(duda_request_t *dr)
 {
 
     FILE * f = fopen("/proc/uptime","r");
@@ -24,13 +24,55 @@ void cb_json(duda_request_t *dr)
     json_t * resp = json->create_object();
     json->add_to_object(resp, "uptime", json->create_number(uptime));
     json->add_to_object(resp, "idletime", json->create_number(idletime));
-    unsigned long * len = malloc(sizeof *len);
+
     response->http_status(dr,200);
     response->http_content_type(dr, "json");
     response->printf(dr, json->print_gc(dr,resp));
     response->end(dr, NULL);
 
         
+}
+
+
+void cb_cpuinfo(duda_request_t *dr)
+{
+
+    FILE * f = fopen("/proc/cpuinfo","r");
+    
+    
+    char * vendor_id = mem->alloc(100); /* dynamically allocating
+                                           memory. Can't use malloc as
+                                           stack may use different
+                                           memory allocator.
+                                        */
+    char * model_name = mem->alloc(200);
+    gc->add(dr,vendor_id);      /* garbage collector will free
+                                   allocated memory after request
+                                   context ends */
+    gc->add(dr,model_name);
+    char line[1000];
+    while(fgets(line,1000,f) != NULL)
+        {
+            if(strstr(line,"vendor_id\t:"))
+                {
+                    sscanf(line, "vendor_id\t: %s", vendor_id);
+                }
+
+            if(strstr(line, "model name\t:"))
+                {
+                    sscanf(line, "model name\t: %[^\n]", model_name);
+                    break;
+                }
+        }
+
+    fclose(f);
+    json_t * resp = json->create_object();
+    json->add_to_object(resp, "vendor_id", json->create_string(vendor_id));
+    json->add_to_object(resp, "model_name", json->create_string(model_name));
+    response->http_status(dr,200);
+    response->http_content_type(dr, "json");
+    response->printf(dr, json->print_gc(dr,resp));
+    response->end(dr, NULL);
 }
 
 /*
@@ -40,18 +82,17 @@ void cb_json(duda_request_t *dr)
  */
 int duda_main()
 {
-
+    /*
+     * Loading JSON package
+     */
+    duda_load_package(json, "json");
+    
     /*
      * Registering callbacks
-     * ---------------------
-     * Here we will define three callbacks to match three different
-     * type of requests, the goal is to understand how the matching
-     * rules works.
      */
-        duda_load_package(json, "json");
-   
-   
-    map->static_add("/", "cb_json");
+
+    map->static_add("/uptime", "cb_uptime");
+    map->static_add("/cpuinfo", "cb_cpuinfo");
     /* Return, everything is OK */
     return 0;
 }
